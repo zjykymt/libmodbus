@@ -154,7 +154,7 @@ extern const unsigned int libmodbus_version_micro;
 
 typedef struct _modbus modbus_t;
 
-typedef struct {
+typedef struct _modbus_mapping_t {
     int nb_bits;
     int start_bits;
     int nb_input_bits;
@@ -187,6 +187,9 @@ MODBUS_API int modbus_set_response_timeout(modbus_t *ctx, uint32_t to_sec, uint3
 
 MODBUS_API int modbus_get_byte_timeout(modbus_t *ctx, uint32_t *to_sec, uint32_t *to_usec);
 MODBUS_API int modbus_set_byte_timeout(modbus_t *ctx, uint32_t to_sec, uint32_t to_usec);
+
+MODBUS_API int modbus_get_indication_timeout(modbus_t *ctx, uint32_t *to_sec, uint32_t *to_usec);
+MODBUS_API int modbus_set_indication_timeout(modbus_t *ctx, uint32_t to_sec, uint32_t to_usec);
 
 MODBUS_API int modbus_get_header_length(modbus_t *ctx);
 

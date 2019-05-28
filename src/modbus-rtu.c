@@ -924,10 +924,14 @@ int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode)
 #if HAVE_DECL_TIOCSRS485
         modbus_rtu_t *ctx_rtu = ctx->backend_data;
         struct serial_rs485 rs485conf;
-        memset(&rs485conf, 0x0, sizeof(struct serial_rs485));
 
         if (mode == MODBUS_RTU_RS485) {
-            rs485conf.flags = SER_RS485_ENABLED;
+            // Get
+            if (ioctl(ctx->s, TIOCGRS485, &rs485conf) < 0) {
+                return -1;
+            }
+            // Set
+            rs485conf.flags |= SER_RS485_ENABLED;
             if (ioctl(ctx->s, TIOCSRS485, &rs485conf) < 0) {
                 return -1;
             }
@@ -938,6 +942,10 @@ int modbus_rtu_set_serial_mode(modbus_t *ctx, int mode)
             /* Turn off RS485 mode only if required */
             if (ctx_rtu->serial_mode == MODBUS_RTU_RS485) {
                 /* The ioctl call is avoided because it can fail on some RS232 ports */
+                if (ioctl(ctx->s, TIOCGRS485, &rs485conf) < 0) {
+                    return -1;
+                }
+                rs485conf.flags &= ~SER_RS485_ENABLED;
                 if (ioctl(ctx->s, TIOCSRS485, &rs485conf) < 0) {
                     return -1;
                 }
@@ -1249,8 +1257,11 @@ static int _modbus_rtu_select(modbus_t *ctx, fd_set *rset,
 }
 
 static void _modbus_rtu_free(modbus_t *ctx) {
-    free(((modbus_rtu_t*)ctx->backend_data)->device);
-    free(ctx->backend_data);
+    if (ctx->backend_data) {
+        free(((modbus_rtu_t *)ctx->backend_data)->device);
+        free(ctx->backend_data);
+    }
+
     free(ctx);
 }
 
@@ -1298,14 +1309,27 @@ modbus_t* modbus_new_rtu(const char *device,
     }
 
     ctx = (modbus_t *)malloc(sizeof(modbus_t));
+    if (ctx == NULL) {
+        return NULL;
+    }
+
     _modbus_init_common(ctx);
     ctx->backend = &_modbus_rtu_backend;
     ctx->backend_data = (modbus_rtu_t *)malloc(sizeof(modbus_rtu_t));
+    if (ctx->backend_data == NULL) {
+        modbus_free(ctx);
+        errno = ENOMEM;
+        return NULL;
+    }
     ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
-    ctx_rtu->device = NULL;
 
     /* Device name and \0 */
     ctx_rtu->device = (char *)malloc((strlen(device) + 1) * sizeof(char));
+    if (ctx_rtu->device == NULL) {
+        modbus_free(ctx);
+        errno = ENOMEM;
+        return NULL;
+    }
     strcpy(ctx_rtu->device, device);
 
     ctx_rtu->baud = baud;
