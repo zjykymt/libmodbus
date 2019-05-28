@@ -13,6 +13,8 @@ libmodbus_la_SOURCES = \
         modbus.c \
         modbus.h \
         modbus-data.c \
+		modbus-gpio.c \
+		modbus-gpio.h \
         modbus-private.h \
         modbus-rtu.c \
         modbus-rtu.h \
